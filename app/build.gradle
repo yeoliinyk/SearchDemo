@@ -18,13 +18,17 @@ android {
         }
 
         debug {
-            buildConfigField "String", "BASE_API_URL", '"https://my.company.com/development/"'
+            buildConfigField "String", "BASE_API_URL", '"https://my.company.com/"'
         }
 
         debugLocal {
             initWith debug
         }
     }
+    dataBinding {
+        enabled true
+    }
+
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
@@ -36,12 +40,15 @@ ext.androidSupportVersion = '27.1.0'
 ext.retrofitVersion = '2.3.0'
 ext.okhttpVersion = '3.8.1'
 ext.supportVersion = '27.1.0'
+ext.lifecycle = '1.1.0'
 
 dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
     implementation "com.android.support:appcompat-v7:$supportVersion"
     implementation "com.android.support:design:$supportVersion"
     implementation 'com.android.support.constraint:constraint-layout:1.0.2'
+
+    implementation "android.arch.lifecycle:extensions:$lifecycle"
 
     implementation 'io.reactivex.rxjava2:rxjava:2.1.10'
 
@@ -55,8 +62,10 @@ dependencies {
     implementation 'com.google.dagger:dagger:2.11'
     implementation 'com.google.dagger:dagger-android:2.11'
     implementation 'com.google.dagger:dagger-android-support:2.11'
+
     annotationProcessor 'com.google.dagger:dagger-android-processor:2.11'
     annotationProcessor 'com.google.dagger:dagger-compiler:2.11'
+    annotationProcessor "android.arch.lifecycle:compiler:$lifecycle"
 
     testImplementation 'junit:junit:4.12'
     androidTestImplementation 'com.android.support.test:runner:1.0.1'

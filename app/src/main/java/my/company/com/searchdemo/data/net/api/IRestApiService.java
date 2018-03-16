@@ -15,10 +15,10 @@ import retrofit2.http.Query;
 
 public interface IRestApiService {
 
-    @GET("api/genres/")
+    @GET("api/genres")
     Single<Collection<GenreDto>> getGenres();
 
-    @GET("api/movies/")
+    @GET("api/movies")
     Single<Collection<MovieDto>> getMoviesByGenre(@Query("genreId") long genreId);
 
 }

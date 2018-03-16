@@ -11,8 +11,12 @@ import dagger.Provides;
 import io.reactivex.schedulers.Schedulers;
 import my.company.com.searchdemo.AppExecutors;
 import my.company.com.searchdemo.BuildConfig;
+import my.company.com.searchdemo.data.Repository;
 import my.company.com.searchdemo.data.net.api.IRestApiService;
 import my.company.com.searchdemo.data.net.helpers.MockResponseInterceptor;
+import my.company.com.searchdemo.data.net.mappers.GenreDtoToGenreMapper;
+import my.company.com.searchdemo.data.net.mappers.MovieDtoToMovieMapper;
+import my.company.com.searchdemo.domain.IRepository;
 import okhttp3.OkHttpClient;
 import okhttp3.logging.HttpLoggingInterceptor;
 import retrofit2.Retrofit;
@@ -21,7 +25,7 @@ import retrofit2.converter.gson.GsonConverterFactory;
 /**
  * @author Yevgen Oliinykov on 3/15/18.
  */
-@Module
+@Module(includes = ViewModelModule.class)
 class AppModule {
 
     @Provides
@@ -54,6 +58,12 @@ class AppModule {
                 .client(httpClient)
                 .build()
                 .create(IRestApiService.class);
+    }
+
+    @Singleton
+    @Provides
+    IRepository provideRepository(IRestApiService apiService) {
+        return new Repository(apiService, new MovieDtoToMovieMapper(), new GenreDtoToGenreMapper());
     }
 
 }
