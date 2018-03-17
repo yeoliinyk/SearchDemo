@@ -31,7 +31,6 @@ public class MoviesMainViewModel extends ViewModel {
         getGenres();
     }
 
-
     public void getGenres() {
         disposables.add(this.repository.getAllGenres().subscribe(this::OnFetchGenresSuccess,
                 this::OnFetchGenresError));
