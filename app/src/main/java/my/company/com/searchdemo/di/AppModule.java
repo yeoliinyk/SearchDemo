@@ -62,8 +62,9 @@ class AppModule {
 
     @Singleton
     @Provides
-    IRepository provideRepository(IRestApiService apiService) {
-        return new Repository(apiService, new MovieDtoToMovieMapper(), new GenreDtoToGenreMapper());
+    IRepository provideRepository(IRestApiService apiService, AppExecutors appExecutors) {
+        return new Repository(apiService, appExecutors,
+                new MovieDtoToMovieMapper(), new GenreDtoToGenreMapper());
     }
 
 }
