@@ -2,6 +2,7 @@ package my.company.com.searchdemo.data.net.helpers;
 
 
 import android.content.Context;
+import android.net.Uri;
 import android.support.annotation.NonNull;
 
 import java.io.ByteArrayOutputStream;
@@ -76,10 +77,28 @@ public class MockResponseInterceptor implements Interceptor {
     private String getFilename(Request request, String scenario) throws IOException {
         String requestedMethod = request.method();
         String prefix = scenario == null ? "" : scenario + "_";
-        String filename = prefix + requestedMethod + request.url().url().getPath();
-        filename = filename.replace("/", "_").replace("-", "_").toLowerCase();
+        String postfix = buildPostfix(request.url().query());
+        String filename = prefix + requestedMethod + request.url().url().getPath() + postfix;
+        filename = filename.replace("/", "_").replace("-", "_").replace("=", "_").toLowerCase();
         return filename;
     }
+
+    private String buildPostfix(String query)
+    {
+        String postfix = "";
+        if (query != null)
+        {
+            String[] params = query.split("&");
+            for (String param : params)
+            {
+                postfix += "_";
+                postfix += param;
+            }
+        }
+
+        return postfix;
+    }
+
 
     private int getResourceId(String filename) {
         return context.getResources().getIdentifier(filename, "raw", context.getPackageName());
