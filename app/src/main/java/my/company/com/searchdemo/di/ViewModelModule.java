@@ -7,6 +7,7 @@ import dagger.Binds;
 import dagger.Module;
 import dagger.multibindings.IntoMap;
 import my.company.com.searchdemo.presentation.base.AppViewModelFactory;
+import my.company.com.searchdemo.presentation.ui.movies.MoviesListViewModel;
 import my.company.com.searchdemo.presentation.ui.movies.MoviesMainViewModel;
 
 /**
@@ -18,7 +19,12 @@ abstract class ViewModelModule {
     @Binds
     @IntoMap
     @ViewModelKey(MoviesMainViewModel.class)
-    abstract ViewModel bindUserViewModel(MoviesMainViewModel userViewModel);
+    abstract ViewModel bindMoviesMainViewModel(MoviesMainViewModel userViewModel);
+
+    @Binds
+    @IntoMap
+    @ViewModelKey(MoviesListViewModel.class)
+    abstract ViewModel bindMoviesListViewModel(MoviesListViewModel userViewModel);
 
     @Binds
     abstract ViewModelProvider.Factory bindViewModelFactory(AppViewModelFactory factory);

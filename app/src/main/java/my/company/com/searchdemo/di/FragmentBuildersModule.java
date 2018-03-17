@@ -2,6 +2,7 @@ package my.company.com.searchdemo.di;
 
 import dagger.Module;
 import dagger.android.ContributesAndroidInjector;
+import my.company.com.searchdemo.presentation.ui.movies.MoviesListFragment;
 import my.company.com.searchdemo.presentation.ui.movies.MoviesMainFragment;
 
 /**
@@ -12,5 +13,8 @@ public abstract class FragmentBuildersModule {
 
     @ContributesAndroidInjector
     abstract MoviesMainFragment contributeMoviesMainFragment();
+
+    @ContributesAndroidInjector
+    abstract MoviesListFragment contributeMoviesListFragment();
 
 }

@@ -39,11 +39,6 @@ public class MoviesMainFragment extends MvvmFragment<FragmentMoviesMainBinding, 
 
     private AutoClearedValue<GenrePagerAdapter> pagerAdapter;
 
-    @Override
-    public void onCreate(@Nullable Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-    }
-
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
@@ -75,6 +70,16 @@ public class MoviesMainFragment extends MvvmFragment<FragmentMoviesMainBinding, 
         this.viewModel.genres.removeOnPropertyChangedCallback(this.onGenresChangedCallback);
     }
 
+    private void setupTabs() {
+        this.appBarLayout = getActivity().findViewById(R.id.appbar);
+        this.tabLayout = (TabLayout) getActivity().getLayoutInflater()
+                .inflate(R.layout.view_tab_layout, appBarLayout, false);
+        appBarLayout.addView(tabLayout);
+        tabLayout.setupWithViewPager(viewPager);
+        tabLayout.addOnTabSelectedListener(new TabLayout.ViewPagerOnTabSelectedListener(this.viewPager));
+        viewPager.addOnPageChangeListener(new TabLayout.TabLayoutOnPageChangeListener(tabLayout));
+    }
+
     private class OnGenresChangedCallback extends Observable.OnPropertyChangedCallback
     {
         @Override
@@ -93,7 +98,7 @@ public class MoviesMainFragment extends MvvmFragment<FragmentMoviesMainBinding, 
 
         @Override
         public Fragment getItem(int position) {
-            return MainActivity.PlaceholderFragment.newInstance(genres.get(position).getId());
+            return MoviesListFragment.newInstance(genres.get(position).getId());
         }
 
         @Override
@@ -112,15 +117,5 @@ public class MoviesMainFragment extends MvvmFragment<FragmentMoviesMainBinding, 
             this.genres = genres;
             notifyDataSetChanged();
         }
-    }
-
-    private void setupTabs() {
-        this.appBarLayout = getActivity().findViewById(R.id.appbar);
-        this.tabLayout = (TabLayout) getActivity().getLayoutInflater()
-                .inflate(R.layout.view_tab_layout, appBarLayout, false);
-        appBarLayout.addView(tabLayout);
-        tabLayout.setupWithViewPager(viewPager);
-        tabLayout.addOnTabSelectedListener(new TabLayout.ViewPagerOnTabSelectedListener(this.viewPager));
-        viewPager.addOnPageChangeListener(new TabLayout.TabLayoutOnPageChangeListener(tabLayout));
     }
 }
