@@ -1,14 +1,18 @@
 package my.company.com.searchdemo.domain.models;
 
+import org.parceler.Parcel;
+import org.parceler.ParcelConstructor;
+
 /**
  * @author Yevgen Oliinykov on 3/13/18.
  */
-
+@Parcel
 public class Genre {
 
     private long id;
     private String name;
 
+    @ParcelConstructor
     public Genre(long id, String name) {
         this.id = id;
         this.name = name;

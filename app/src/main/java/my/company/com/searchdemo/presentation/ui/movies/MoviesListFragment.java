@@ -1,7 +1,6 @@
 package my.company.com.searchdemo.presentation.ui.movies;
 
 import android.databinding.Observable;
-import android.databinding.ObservableField;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -19,6 +18,7 @@ import io.reactivex.disposables.Disposable;
 import my.company.com.searchdemo.R;
 import my.company.com.searchdemo.databinding.FragmentMoviesListBinding;
 import my.company.com.searchdemo.di.Injectable;
+import my.company.com.searchdemo.domain.models.Genre;
 import my.company.com.searchdemo.domain.models.Movie;
 import my.company.com.searchdemo.presentation.base.MvvmFragment;
 import my.company.com.searchdemo.presentation.helpers.AutoClearedValue;
@@ -31,20 +31,21 @@ import timber.log.Timber;
 public class MoviesListFragment extends MvvmFragment<FragmentMoviesListBinding, MoviesListViewModel>
         implements Injectable {
 
-    private static final String ARG_GENRE_ID = "genre_id";
-    private static final String ARG_MOVIES = "movies";
+    public static final String ARG_GENRE = "genre";
+    public static final String ARG_MOVIES = "movies";
 
-    public static MoviesListFragment newInstance(long genreId) {
+    public static MoviesListFragment newInstance(Genre genre) {
         MoviesListFragment fragment = new MoviesListFragment();
         Bundle args = new Bundle();
-        args.putLong(ARG_GENRE_ID, genreId);
+        args.putParcelable(ARG_GENRE, Parcels.wrap(genre));
         fragment.setArguments(args);
         return fragment;
     }
 
-    public static MoviesListFragment newInstance(Collection<Movie> movies) {
+    public static MoviesListFragment newInstance(Genre genre, Collection<Movie> movies) {
         MoviesListFragment fragment = new MoviesListFragment();
         Bundle args = new Bundle();
+        args.putParcelable(ARG_GENRE, Parcels.wrap(genre));
         args.putParcelable(ARG_MOVIES, Parcels.wrap(new ArrayList<>(movies)));
         fragment.setArguments(args);
         return fragment;
@@ -105,15 +106,16 @@ public class MoviesListFragment extends MvvmFragment<FragmentMoviesListBinding, 
 
     private void initMoviesList() {
         Bundle args = getArguments();
-        if (args != null && args.containsKey(ARG_GENRE_ID)) {
-            this.viewModel.genreId.set(args.getLong(ARG_GENRE_ID));
-        } else if (args != null && args.containsKey(ARG_MOVIES)) {
-            this.viewModel.movies.set(Parcels.unwrap(args.getParcelable(ARG_MOVIES)));
+        if (args != null && args.containsKey(ARG_GENRE)) {
+            this.viewModel.genre.set(Parcels.unwrap(args.getParcelable(ARG_GENRE)));
         } else {
-            this.viewModel.genreId.set(-1L);
+            this.viewModel.genre.set(null);
+        }
+        if (args != null && args.containsKey(ARG_MOVIES)) {
+            this.viewModel.movies.set(Parcels.unwrap(args.getParcelable(ARG_MOVIES)));
         }
 
-        updateMoviesList(viewModel.movies.get());
+//        updateMoviesList(viewModel.movies.get());
     }
 
     private class OnMoviesChangedCallback extends Observable.OnPropertyChangedCallback {
@@ -124,11 +126,14 @@ public class MoviesListFragment extends MvvmFragment<FragmentMoviesListBinding, 
         }
     }
 
-    private void updateMoviesList(List<Movie> movies) {
-        this.moviesAdapter.get().setOriginalList(movies);
-        List<Movie> copy = new ArrayList<>();
-        copy.addAll(movies);
-        this.moviesAdapter.get().replace(copy);
+    public void updateMoviesList(List<Movie> movies) {
+        if (moviesAdapter != null)
+        {
+            this.moviesAdapter.get().setOriginalList(movies);
+            List<Movie> copy = new ArrayList<>();
+            copy.addAll(movies);
+            this.moviesAdapter.get().replace(copy);
+        }
     }
 
     private void setupMoviesList() {

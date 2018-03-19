@@ -3,7 +3,6 @@ package my.company.com.searchdemo.presentation.ui.movies;
 import android.arch.lifecycle.ViewModel;
 import android.databinding.Observable;
 import android.databinding.ObservableField;
-import android.util.Log;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -13,6 +12,7 @@ import javax.inject.Inject;
 
 import io.reactivex.disposables.CompositeDisposable;
 import my.company.com.searchdemo.domain.IRepository;
+import my.company.com.searchdemo.domain.models.Genre;
 import my.company.com.searchdemo.domain.models.Movie;
 import timber.log.Timber;
 
@@ -26,19 +26,19 @@ public class MoviesListViewModel extends ViewModel {
     private final IRepository repository;
 
     public final ObservableField<List<Movie>> movies = new ObservableField<>(new ArrayList<>());
-    public final ObservableField<Long> genreId = new ObservableField<>();
+    public final ObservableField<Genre> genre = new ObservableField<>();
     public final ObservableField<Boolean> loading = new ObservableField<>();
 
     @Inject
     public MoviesListViewModel(IRepository repository) {
         this.repository = repository;
 
-        this.genreId.addOnPropertyChangedCallback(new Observable.OnPropertyChangedCallback() {
+        this.genre.addOnPropertyChangedCallback(new Observable.OnPropertyChangedCallback() {
             @Override
             public void onPropertyChanged(Observable observable, int i) {
-                if (genreId.get() > 0)
+                if (genre.get() != null)
                 {
-                    //                    getMoviesWithGenreId(genreId.get());
+                    // getMoviesWithGenreId(genre.get());
                 }
                 else
                 {

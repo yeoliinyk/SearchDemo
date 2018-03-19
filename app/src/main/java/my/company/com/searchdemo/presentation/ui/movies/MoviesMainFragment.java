@@ -19,6 +19,8 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Filter;
+import android.widget.Filterable;
 
 import com.jakewharton.rxrelay2.BehaviorRelay;
 
@@ -139,6 +141,9 @@ public class MoviesMainFragment extends MvvmFragment<FragmentMoviesMainBinding, 
         @Override
         public void onPropertyChanged(Observable observable, int i) {
             pagerAdapter.get().updateGenres(viewModel.genres.get(), viewModel.movies.get());
+            searchRelay.debounce(300, TimeUnit.MILLISECONDS)
+                    .observeOn(Schedulers.from(appExecutors.mainThread()))
+                    .subscribe(query -> pagerAdapter.get().getFilter().filter(query));
         }
     }
 
@@ -150,40 +155,5 @@ public class MoviesMainFragment extends MvvmFragment<FragmentMoviesMainBinding, 
                 .observeOn(Schedulers.from(this.appExecutors.mainThread()));
     }
 
-    private class GenrePagerAdapter extends FragmentStatePagerAdapter {
 
-        private List<Genre> genres = new ArrayList<>();
-        private Map<Genre, Collection<Movie>> movies = new HashMap<>();
-
-        public GenrePagerAdapter(FragmentManager fm) {
-            super(fm);
-        }
-
-        @Override
-        public Fragment getItem(int position) {
-            MoviesListFragment fragment = MoviesListFragment.newInstance(movies.get(genres.get(position)));
-            fragment.setSearchViewObservable(searchRelay.debounce(300, TimeUnit.MILLISECONDS)
-                    .observeOn(Schedulers.from(appExecutors.mainThread())));
-            return fragment;
-        }
-
-        @Override
-        public int getCount() {
-            return genres.size();
-        }
-
-        @Nullable
-        @Override
-        public CharSequence getPageTitle(int position) {
-            return genres.get(position).getName();
-        }
-
-        public void updateGenres(List<Genre> genres, Map<Genre, Collection<Movie>> movies) {
-            this.genres = genres;
-            this.movies = movies;
-            notifyDataSetChanged();
-        }
-
-
-    }
 }
