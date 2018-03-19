@@ -64,16 +64,11 @@ public class Repository implements IRepository {
     @Override
     public Single<Map<Genre, Collection<Movie>>> getAllMovies(List<Genre> genres) {
         return Observable.just(genres)
-                .subscribeOn(Schedulers.from(this.appExecutors.networkIO()))
-                .observeOn(Schedulers.from(this.appExecutors.mainThread()))
                 .flatMapIterable(x -> x)
                 .flatMap(g -> this.apiService.getMoviesByGenre(g.getId()).map(this.movieMapper::map).map(m -> Pair.create(g,m)).toObservable())
-                .collect(HashMap::new, new BiConsumer<Map<Genre, Collection<Movie>>, Pair<Genre, Collection<Movie>>>() {
-                    @Override
-                    public void accept(Map<Genre, Collection<Movie>> map, Pair<Genre, Collection<Movie>> pair) throws Exception {
-                        map.put(pair.first, pair.second);
-                    }
-                });
+                .subscribeOn(Schedulers.from(this.appExecutors.networkIO()))
+                .observeOn(Schedulers.from(this.appExecutors.mainThread()))
+                .collect(HashMap::new, (map, pair) -> map.put(pair.first, pair.second));
     }
 
 }
