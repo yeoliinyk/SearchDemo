@@ -23,7 +23,10 @@ import android.view.ViewGroup;
 import com.jakewharton.rxrelay2.BehaviorRelay;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import javax.inject.Inject;
@@ -34,6 +37,7 @@ import my.company.com.searchdemo.R;
 import my.company.com.searchdemo.databinding.FragmentMoviesMainBinding;
 import my.company.com.searchdemo.di.Injectable;
 import my.company.com.searchdemo.domain.models.Genre;
+import my.company.com.searchdemo.domain.models.Movie;
 import my.company.com.searchdemo.presentation.base.MvvmFragment;
 import my.company.com.searchdemo.presentation.helpers.AutoClearedValue;
 
@@ -49,6 +53,7 @@ public class MoviesMainFragment extends MvvmFragment<FragmentMoviesMainBinding, 
     private TabLayout tabLayout;
     private AppBarLayout appBarLayout;
     private OnGenresChangedCallback onGenresChangedCallback;
+    private OnMoviesChangedCallback onMoviesChangedCallback;
 
     private AutoClearedValue<GenrePagerAdapter> pagerAdapter;
 
@@ -76,7 +81,8 @@ public class MoviesMainFragment extends MvvmFragment<FragmentMoviesMainBinding, 
         setupTabs();
 
         this.onGenresChangedCallback = new OnGenresChangedCallback();
-        this.pagerAdapter.get().updateGenres(viewModel.genres.get());
+        this.onMoviesChangedCallback = new OnMoviesChangedCallback();
+//        this.pagerAdapter.get().updateGenres(viewModel.genres.get());
     }
 
     @Override
@@ -101,13 +107,15 @@ public class MoviesMainFragment extends MvvmFragment<FragmentMoviesMainBinding, 
     @Override
     public void onResume() {
         super.onResume();
-        this.viewModel.genres.addOnPropertyChangedCallback(this.onGenresChangedCallback);
+//        this.viewModel.genres.addOnPropertyChangedCallback(this.onGenresChangedCallback);
+        this.viewModel.movies.addOnPropertyChangedCallback(this.onMoviesChangedCallback);
     }
 
     @Override
     public void onPause() {
         super.onPause();
-        this.viewModel.genres.removeOnPropertyChangedCallback(this.onGenresChangedCallback);
+//        this.viewModel.genres.removeOnPropertyChangedCallback(this.onGenresChangedCallback);
+        this.viewModel.movies.removeOnPropertyChangedCallback(this.onMoviesChangedCallback);
     }
 
     private void setupTabs() {
@@ -123,7 +131,14 @@ public class MoviesMainFragment extends MvvmFragment<FragmentMoviesMainBinding, 
     private class OnGenresChangedCallback extends Observable.OnPropertyChangedCallback {
         @Override
         public void onPropertyChanged(Observable observable, int i) {
-            pagerAdapter.get().updateGenres(((ObservableField<List<Genre>>) observable).get()); //ugly cast :(
+//            pagerAdapter.get().updateGenres(((ObservableField<List<Genre>>) observable).get()); //ugly cast :(
+        }
+    }
+
+    private class OnMoviesChangedCallback extends Observable.OnPropertyChangedCallback {
+        @Override
+        public void onPropertyChanged(Observable observable, int i) {
+            pagerAdapter.get().updateGenres(viewModel.genres.get(), viewModel.movies.get());
         }
     }
 
@@ -138,6 +153,7 @@ public class MoviesMainFragment extends MvvmFragment<FragmentMoviesMainBinding, 
     private class GenrePagerAdapter extends FragmentStatePagerAdapter {
 
         private List<Genre> genres = new ArrayList<>();
+        private Map<Genre, Collection<Movie>> movies = new HashMap<>();
 
         public GenrePagerAdapter(FragmentManager fm) {
             super(fm);
@@ -145,7 +161,7 @@ public class MoviesMainFragment extends MvvmFragment<FragmentMoviesMainBinding, 
 
         @Override
         public Fragment getItem(int position) {
-            MoviesListFragment fragment = MoviesListFragment.newInstance(genres.get(position).getId());
+            MoviesListFragment fragment = MoviesListFragment.newInstance(movies.get(genres.get(position)));
             fragment.setSearchViewObservable(searchRelay.debounce(300, TimeUnit.MILLISECONDS)
                     .observeOn(Schedulers.from(appExecutors.mainThread())));
             return fragment;
@@ -162,9 +178,12 @@ public class MoviesMainFragment extends MvvmFragment<FragmentMoviesMainBinding, 
             return genres.get(position).getName();
         }
 
-        public void updateGenres(List<Genre> genres) {
+        public void updateGenres(List<Genre> genres, Map<Genre, Collection<Movie>> movies) {
             this.genres = genres;
+            this.movies = movies;
             notifyDataSetChanged();
         }
+
+
     }
 }

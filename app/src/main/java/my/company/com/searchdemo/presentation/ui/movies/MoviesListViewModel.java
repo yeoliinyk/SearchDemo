@@ -37,7 +37,9 @@ public class MoviesListViewModel extends ViewModel {
             @Override
             public void onPropertyChanged(Observable observable, int i) {
                 if (genreId.get() > 0)
-                    getMoviesWithGenreId(genreId.get());
+                {
+                    //                    getMoviesWithGenreId(genreId.get());
+                }
                 else
                 {
                     //TODO: handle missing genre id

@@ -1,15 +1,19 @@
 package my.company.com.searchdemo.domain.models;
 
+import org.parceler.Parcel;
+import org.parceler.ParcelConstructor;
+
 /**
  * @author Yevgen Oliinykov on 3/13/18.
  */
-
+@Parcel(Parcel.Serialization.BEAN)
 public class Movie {
 
     private long id;
     private String name;
     private String description;
 
+    @ParcelConstructor
     public Movie(long id, String name, String description) {
         this.id = id;
         this.name = name;

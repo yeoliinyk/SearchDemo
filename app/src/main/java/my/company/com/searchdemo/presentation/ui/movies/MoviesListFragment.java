@@ -9,7 +9,10 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
+import org.parceler.Parcels;
+
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 import io.reactivex.disposables.Disposable;
@@ -29,11 +32,20 @@ public class MoviesListFragment extends MvvmFragment<FragmentMoviesListBinding, 
         implements Injectable {
 
     private static final String ARG_GENRE_ID = "genre_id";
+    private static final String ARG_MOVIES = "movies";
 
     public static MoviesListFragment newInstance(long genreId) {
         MoviesListFragment fragment = new MoviesListFragment();
         Bundle args = new Bundle();
         args.putLong(ARG_GENRE_ID, genreId);
+        fragment.setArguments(args);
+        return fragment;
+    }
+
+    public static MoviesListFragment newInstance(Collection<Movie> movies) {
+        MoviesListFragment fragment = new MoviesListFragment();
+        Bundle args = new Bundle();
+        args.putParcelable(ARG_MOVIES, Parcels.wrap(new ArrayList<>(movies)));
         fragment.setArguments(args);
         return fragment;
     }
@@ -95,6 +107,8 @@ public class MoviesListFragment extends MvvmFragment<FragmentMoviesListBinding, 
         Bundle args = getArguments();
         if (args != null && args.containsKey(ARG_GENRE_ID)) {
             this.viewModel.genreId.set(args.getLong(ARG_GENRE_ID));
+        } else if (args != null && args.containsKey(ARG_MOVIES)) {
+            this.viewModel.movies.set(Parcels.unwrap(args.getParcelable(ARG_MOVIES)));
         } else {
             this.viewModel.genreId.set(-1L);
         }
@@ -105,7 +119,7 @@ public class MoviesListFragment extends MvvmFragment<FragmentMoviesListBinding, 
     private class OnMoviesChangedCallback extends Observable.OnPropertyChangedCallback {
         @Override
         public void onPropertyChanged(Observable observable, int i) {
-            List<Movie> movies = ((ObservableField<List<Movie>>) observable).get(); //ugly cast :(
+            List<Movie> movies = viewModel.movies.get();
             updateMoviesList(movies);
         }
     }
