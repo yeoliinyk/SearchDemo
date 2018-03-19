@@ -2,13 +2,14 @@ package my.company.com.searchdemo.data.net.helpers;
 
 
 import android.content.Context;
-import android.net.Uri;
 import android.support.annotation.NonNull;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URLConnection;
+import java.util.Random;
+import java.util.concurrent.TimeUnit;
 
 import okhttp3.Interceptor;
 import okhttp3.MediaType;
@@ -43,7 +44,6 @@ public class MockResponseInterceptor implements Interceptor {
 
     @Override
     public Response intercept(@NonNull Chain chain) throws IOException {
-
         // Get resource ID for mock response file.
         String fileName = getFilename(chain.request(), scenario);
         int resourceId = getResourceId(fileName);
@@ -61,6 +61,13 @@ public class MockResponseInterceptor implements Interceptor {
         String mimeType = URLConnection.guessContentTypeFromStream(inputStream);
         if (mimeType == null) {
             mimeType = "application/json";
+        }
+
+        try {
+            int delay = (new Random().nextInt(15) + 1) * 100;
+            TimeUnit.MILLISECONDS.sleep(delay);
+        } catch (InterruptedException e) {
+
         }
 
         // Build and return mock response.
@@ -83,14 +90,11 @@ public class MockResponseInterceptor implements Interceptor {
         return filename;
     }
 
-    private String buildPostfix(String query)
-    {
+    private String buildPostfix(String query) {
         String postfix = "";
-        if (query != null)
-        {
+        if (query != null) {
             String[] params = query.split("&");
-            for (String param : params)
-            {
+            for (String param : params) {
                 postfix += "_";
                 postfix += param;
             }
