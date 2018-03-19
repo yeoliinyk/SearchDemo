@@ -1,6 +1,7 @@
 package my.company.com.searchdemo.presentation.ui.movies;
 
 import android.arch.lifecycle.ViewModel;
+import android.databinding.ObservableBoolean;
 import android.databinding.ObservableField;
 
 import java.util.ArrayList;
@@ -23,17 +24,20 @@ public class MoviesMainViewModel extends ViewModel {
     private final IRepository repository;
 
     public final ObservableField<List<Genre>> genres = new ObservableField<>(new ArrayList<>());
+    public final ObservableBoolean loading = new ObservableBoolean();
 
     @Inject
     public MoviesMainViewModel(IRepository repository) {
         this.repository = repository;
-
         getGenres();
     }
 
     public void getGenres() {
-        disposables.add(this.repository.getAllGenres().subscribe(this::OnFetchGenresSuccess,
-                this::OnFetchGenresError));
+        disposables.add(this.repository.getAllGenres()
+                .doOnSubscribe(x -> loading.set(true))
+                .doOnSuccess(x -> loading.set(false))
+                .doOnError(x -> loading.set(false))
+                .subscribe(this::OnFetchGenresSuccess, this::OnFetchGenresError));
     }
 
     private void OnFetchGenresSuccess(Collection<Genre> genres) {

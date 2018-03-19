@@ -26,7 +26,7 @@
             android:layout_marginStart="16dp"
             android:text="@{movie.name}"
             android:textColor="#181818"
-            android:textSize="14sp"
+            android:textSize="16sp"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent"

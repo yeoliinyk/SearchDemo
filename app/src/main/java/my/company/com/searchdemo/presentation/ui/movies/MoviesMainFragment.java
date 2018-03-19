@@ -9,16 +9,27 @@ import android.support.design.widget.AppBarLayout;
 import android.support.design.widget.TabLayout;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
+import android.support.v4.app.FragmentPagerAdapter;
 import android.support.v4.app.FragmentStatePagerAdapter;
 import android.support.v4.view.ViewPager;
+import android.support.v7.widget.SearchView;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 
+import com.jakewharton.rxrelay2.BehaviorRelay;
+
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
-import my.company.com.searchdemo.MainActivity;
+import javax.inject.Inject;
+
+import io.reactivex.schedulers.Schedulers;
+import my.company.com.searchdemo.AppExecutors;
 import my.company.com.searchdemo.R;
 import my.company.com.searchdemo.databinding.FragmentMoviesMainBinding;
 import my.company.com.searchdemo.di.Injectable;
@@ -32,12 +43,22 @@ import my.company.com.searchdemo.presentation.helpers.AutoClearedValue;
 
 public class MoviesMainFragment extends MvvmFragment<FragmentMoviesMainBinding, MoviesMainViewModel> implements Injectable {
 
+    @Inject AppExecutors appExecutors;
+
     private ViewPager viewPager;
     private TabLayout tabLayout;
     private AppBarLayout appBarLayout;
     private OnGenresChangedCallback onGenresChangedCallback;
 
     private AutoClearedValue<GenrePagerAdapter> pagerAdapter;
+
+    BehaviorRelay<String> searchRelay = BehaviorRelay.createDefault("");
+
+    @Override
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        this.setHasOptionsMenu(true);
+    }
 
     @Nullable
     @Override
@@ -49,13 +70,32 @@ public class MoviesMainFragment extends MvvmFragment<FragmentMoviesMainBinding, 
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
         this.pagerAdapter = new AutoClearedValue<>(this,
-                new GenrePagerAdapter(getActivity().getSupportFragmentManager()));
+                new GenrePagerAdapter(getChildFragmentManager()));
         viewPager = binding.get().viewPager;
         viewPager.setAdapter(pagerAdapter.get());
         setupTabs();
 
         this.onGenresChangedCallback = new OnGenresChangedCallback();
         this.pagerAdapter.get().updateGenres(viewModel.genres.get());
+    }
+
+    @Override
+    public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
+        inflater.inflate(R.menu.menu_fragment_movies, menu);
+        MenuItem searchMenuItem = menu.findItem(R.id.action_search);
+        SearchView searchView = (SearchView) searchMenuItem.getActionView();
+        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+            @Override
+            public boolean onQueryTextSubmit(String query) {
+                return false;
+            }
+
+            @Override
+            public boolean onQueryTextChange(String s) {
+                searchRelay.accept(s);
+                return true;
+            }
+        });
     }
 
     @Override
@@ -80,15 +120,22 @@ public class MoviesMainFragment extends MvvmFragment<FragmentMoviesMainBinding, 
         viewPager.addOnPageChangeListener(new TabLayout.TabLayoutOnPageChangeListener(tabLayout));
     }
 
-    private class OnGenresChangedCallback extends Observable.OnPropertyChangedCallback
-    {
+    private class OnGenresChangedCallback extends Observable.OnPropertyChangedCallback {
         @Override
         public void onPropertyChanged(Observable observable, int i) {
-            pagerAdapter.get().updateGenres(((ObservableField<List<Genre>>)observable).get()); //ugly cast :(
+            pagerAdapter.get().updateGenres(((ObservableField<List<Genre>>) observable).get()); //ugly cast :(
         }
     }
 
-    private static class GenrePagerAdapter extends FragmentStatePagerAdapter {
+    private io.reactivex.Observable<String> buildSearchViewObservable()
+    {
+        return this.searchRelay
+                .debounce(300, TimeUnit.MILLISECONDS)
+                .subscribeOn(Schedulers.from(this.appExecutors.networkIO()))
+                .observeOn(Schedulers.from(this.appExecutors.mainThread()));
+    }
+
+    private class GenrePagerAdapter extends FragmentStatePagerAdapter {
 
         private List<Genre> genres = new ArrayList<>();
 
@@ -98,7 +145,10 @@ public class MoviesMainFragment extends MvvmFragment<FragmentMoviesMainBinding, 
 
         @Override
         public Fragment getItem(int position) {
-            return MoviesListFragment.newInstance(genres.get(position).getId());
+            MoviesListFragment fragment = MoviesListFragment.newInstance(genres.get(position).getId());
+            fragment.setSearchViewObservable(searchRelay.debounce(300, TimeUnit.MILLISECONDS)
+                    .observeOn(Schedulers.from(appExecutors.mainThread())));
+            return fragment;
         }
 
         @Override
@@ -112,8 +162,7 @@ public class MoviesMainFragment extends MvvmFragment<FragmentMoviesMainBinding, 
             return genres.get(position).getName();
         }
 
-        public void updateGenres(List<Genre> genres)
-        {
+        public void updateGenres(List<Genre> genres) {
             this.genres = genres;
             notifyDataSetChanged();
         }

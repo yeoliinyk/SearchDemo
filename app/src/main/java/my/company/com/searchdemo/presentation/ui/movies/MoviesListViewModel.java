@@ -27,6 +27,7 @@ public class MoviesListViewModel extends ViewModel {
 
     public final ObservableField<List<Movie>> movies = new ObservableField<>(new ArrayList<>());
     public final ObservableField<Long> genreId = new ObservableField<>();
+    public final ObservableField<Boolean> loading = new ObservableField<>();
 
     @Inject
     public MoviesListViewModel(IRepository repository) {
@@ -46,8 +47,11 @@ public class MoviesListViewModel extends ViewModel {
     }
 
     public void getMoviesWithGenreId(long genreId) {
-        disposables.add(this.repository.getAllMoviesByGenre(genreId).subscribe(this::OnFetchGenresSuccess,
-                this::OnFetchGenresError));
+        disposables.add(this.repository.getAllMoviesByGenre(genreId)
+                .doOnSubscribe(x -> loading.set(true))
+                .doOnError(x -> loading.set(false))
+                .doOnSuccess(x -> loading.set(false))
+                .subscribe(this::OnFetchGenresSuccess, this::OnFetchGenresError));
     }
 
     private void OnFetchGenresSuccess(Collection<Movie> movies) {
