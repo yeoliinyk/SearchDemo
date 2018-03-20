@@ -1,16 +1,11 @@
 package my.company.com.searchdemo.presentation.ui.movies;
 
 import android.databinding.Observable;
-import android.databinding.ObservableField;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.design.widget.AppBarLayout;
 import android.support.design.widget.TabLayout;
-import android.support.v4.app.Fragment;
-import android.support.v4.app.FragmentManager;
-import android.support.v4.app.FragmentPagerAdapter;
-import android.support.v4.app.FragmentStatePagerAdapter;
 import android.support.v4.view.ViewPager;
 import android.support.v7.widget.SearchView;
 import android.view.LayoutInflater;
@@ -19,27 +14,19 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Filter;
-import android.widget.Filterable;
 
 import com.jakewharton.rxrelay2.BehaviorRelay;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import javax.inject.Inject;
 
+import io.reactivex.disposables.Disposable;
 import io.reactivex.schedulers.Schedulers;
 import my.company.com.searchdemo.AppExecutors;
 import my.company.com.searchdemo.R;
 import my.company.com.searchdemo.databinding.FragmentMoviesMainBinding;
 import my.company.com.searchdemo.di.Injectable;
-import my.company.com.searchdemo.domain.models.Genre;
-import my.company.com.searchdemo.domain.models.Movie;
 import my.company.com.searchdemo.presentation.base.MvvmFragment;
 import my.company.com.searchdemo.presentation.helpers.AutoClearedValue;
 
@@ -54,12 +41,12 @@ public class MoviesMainFragment extends MvvmFragment<FragmentMoviesMainBinding, 
     private ViewPager viewPager;
     private TabLayout tabLayout;
     private AppBarLayout appBarLayout;
-    private OnGenresChangedCallback onGenresChangedCallback;
     private OnMoviesChangedCallback onMoviesChangedCallback;
 
     private AutoClearedValue<GenrePagerAdapter> pagerAdapter;
 
     BehaviorRelay<String> searchRelay = BehaviorRelay.createDefault("");
+    Disposable searchRelayDisposable;
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
@@ -82,9 +69,7 @@ public class MoviesMainFragment extends MvvmFragment<FragmentMoviesMainBinding, 
         viewPager.setAdapter(pagerAdapter.get());
         setupTabs();
 
-        this.onGenresChangedCallback = new OnGenresChangedCallback();
         this.onMoviesChangedCallback = new OnMoviesChangedCallback();
-//        this.pagerAdapter.get().updateGenres(viewModel.genres.get());
     }
 
     @Override
@@ -107,17 +92,23 @@ public class MoviesMainFragment extends MvvmFragment<FragmentMoviesMainBinding, 
     }
 
     @Override
+    public void onActivityCreated(@Nullable Bundle savedInstanceState) {
+        super.onActivityCreated(savedInstanceState);
+        populateAdapter();
+    }
+
+    @Override
     public void onResume() {
         super.onResume();
-//        this.viewModel.genres.addOnPropertyChangedCallback(this.onGenresChangedCallback);
         this.viewModel.movies.addOnPropertyChangedCallback(this.onMoviesChangedCallback);
+        subscribeToSearchView();
     }
 
     @Override
     public void onPause() {
         super.onPause();
-//        this.viewModel.genres.removeOnPropertyChangedCallback(this.onGenresChangedCallback);
         this.viewModel.movies.removeOnPropertyChangedCallback(this.onMoviesChangedCallback);
+        unsubscribeFromSearchView();
     }
 
     private void setupTabs() {
@@ -130,30 +121,28 @@ public class MoviesMainFragment extends MvvmFragment<FragmentMoviesMainBinding, 
         viewPager.addOnPageChangeListener(new TabLayout.TabLayoutOnPageChangeListener(tabLayout));
     }
 
-    private class OnGenresChangedCallback extends Observable.OnPropertyChangedCallback {
-        @Override
-        public void onPropertyChanged(Observable observable, int i) {
-//            pagerAdapter.get().updateGenres(((ObservableField<List<Genre>>) observable).get()); //ugly cast :(
-        }
-    }
-
     private class OnMoviesChangedCallback extends Observable.OnPropertyChangedCallback {
         @Override
         public void onPropertyChanged(Observable observable, int i) {
-            pagerAdapter.get().updateGenres(viewModel.genres.get(), viewModel.movies.get());
-            searchRelay.debounce(300, TimeUnit.MILLISECONDS)
-                    .observeOn(Schedulers.from(appExecutors.mainThread()))
-                    .subscribe(query -> pagerAdapter.get().getFilter().filter(query));
+            populateAdapter();
         }
     }
 
-    private io.reactivex.Observable<String> buildSearchViewObservable()
-    {
-        return this.searchRelay
-                .debounce(300, TimeUnit.MILLISECONDS)
-                .subscribeOn(Schedulers.from(this.appExecutors.networkIO()))
-                .observeOn(Schedulers.from(this.appExecutors.mainThread()));
+    private void populateAdapter() {
+        this.pagerAdapter.get().invalidateFilter();
+        this.pagerAdapter.get().update(this.viewModel.movies.get());
     }
 
+    private void subscribeToSearchView() {
+        this.searchRelayDisposable = this.searchRelay
+                .debounce(300, TimeUnit.MILLISECONDS)
+                .observeOn(Schedulers.from(this.appExecutors.mainThread()))
+                .subscribe(query -> pagerAdapter.get().getFilter().filter(query));
+    }
+
+    private void unsubscribeFromSearchView() {
+        if (this.searchRelayDisposable != null)
+            this.searchRelayDisposable.dispose();
+    }
 
 }

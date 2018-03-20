@@ -1,14 +1,17 @@
 package my.company.com.searchdemo.presentation.ui.movies;
 
+import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
-import android.support.v4.app.FragmentStatePagerAdapter;
+import android.support.v4.app.FragmentPagerAdapter;
+import android.view.ViewGroup;
 import android.widget.Filter;
 import android.widget.Filterable;
 
 import com.annimon.stream.Stream;
+import com.annimon.stream.function.Predicate;
 
 import org.parceler.Parcels;
 
@@ -21,19 +24,20 @@ import java.util.Map;
 
 import my.company.com.searchdemo.domain.models.Genre;
 import my.company.com.searchdemo.domain.models.Movie;
-import timber.log.Timber;
+
 
 /**
  * @author Yevgen Oliinykov on 3/20/18.
  */
 
-public class GenrePagerAdapter extends FragmentStatePagerAdapter implements Filterable {
+public class GenrePagerAdapter extends FragmentPagerAdapter implements Filterable {
 
     private MovieFilter filter;
 
     private List<Genre> genres = new ArrayList<>();
     private Map<Genre, Collection<Movie>> movies = new HashMap<>();
     private boolean isFiltered;
+    private int baseId = 0;
 
     public GenrePagerAdapter(FragmentManager fm) {
         super(fm);
@@ -45,14 +49,20 @@ public class GenrePagerAdapter extends FragmentStatePagerAdapter implements Filt
         return MoviesListFragment.newInstance(genre, this.movies.get(genre));
     }
 
+    // workaround for bug in FragmentPagerAdapter -> on data set changed fragments remains cached with old position tag
+    @Override
+    public long getItemId(int position) {
+        return baseId + position;
+    }
+
     @Override
     public int getItemPosition(@NonNull Object object) {
-        int position = super.getItemPosition(object);
-
+        int position = POSITION_UNCHANGED;
         MoviesListFragment fragment = (MoviesListFragment) object;
-        if (fragment.getArguments().containsKey(MoviesListFragment.ARG_GENRE))
-        {
-            Genre genre = Parcels.unwrap(fragment.getArguments().getParcelable(MoviesListFragment.ARG_GENRE));
+        Genre genre = getGenreFromFragment(fragment);
+        if (genre != null) {
+            int correctPosition = this.genres.indexOf(genre);
+            position = correctPosition >= 0 ? correctPosition : POSITION_NONE;
             fragment.updateMoviesList(new ArrayList<>(this.movies.get(genre)));
         }
 
@@ -75,48 +85,75 @@ public class GenrePagerAdapter extends FragmentStatePagerAdapter implements Filt
         return title;
     }
 
-    public void updateGenres(List<Genre> genres, Map<Genre, Collection<Movie>> movies) {
-        this.genres = genres;
+    public void update(Map<Genre, Collection<Movie>> movies) {
+        // workaround for bug in FragmentPagerAdapter -> on data set changed fragments remains cached with old position tag
+        baseId += movies.size();
         this.movies = movies;
+        this.genres = buildGenresList(movies);
+
         notifyDataSetChanged();
+    }
+
+    @Override
+    public Filter getFilter() {
+        if (filter == null) {
+            filter = new MovieFilter(this, this.movies);
+        }
+        return filter;
+    }
+
+    public void invalidateFilter() {
+        this.filter = null;
+    }
+
+    private Genre getGenreFromFragment(Fragment fragment) {
+        if (fragment == null)
+            return null;
+
+        Bundle args = fragment.getArguments();
+        if (args != null && args.containsKey(MoviesListFragment.ARG_GENRE)) {
+            return Parcels.unwrap(fragment.getArguments().getParcelable(MoviesListFragment.ARG_GENRE));
+        }
+
+        return null;
+    }
+
+    private List<Genre> buildGenresList(Map<Genre, Collection<Movie>> movies) {
+        return Stream.of(movies)
+                .filter(x -> x.getValue().size() > 0)
+                .map(Map.Entry::getKey)
+                .sortBy(Genre::getId)
+                .toList();
     }
 
     private Collection<Movie> getMoviesByPosition(int position) {
         return movies.get(genres.get(position));
     }
 
-    @Override
-    public Filter getFilter() {
-        if (filter == null) {
-            filter = new MovieFilter(this, this.genres, this.movies);
-        }
-        return filter;
-    }
-
     private static class MovieFilter extends Filter {
-        private List<Genre> genres = new ArrayList<>();
-        private Map<Genre, Collection<Movie>> movies = new HashMap<>();
+
+        private Map<Genre, Collection<Movie>> origMovies = new HashMap<>();
         private GenrePagerAdapter adapter;
 
-        public MovieFilter(GenrePagerAdapter adapter, List<Genre> origGenres, Map<Genre,
-                Collection<Movie>> origMovies) {
-            this.genres = new ArrayList<>(origGenres);
-            this.movies = new HashMap<>(origMovies);
+        public MovieFilter(GenrePagerAdapter adapter, Map<Genre, Collection<Movie>> origMovies) {
+            this.origMovies = new HashMap<>(origMovies);
             this.adapter = adapter;
         }
 
         @Override
         protected FilterResults performFiltering(CharSequence constraint) {
-            Timber.i("Perform filtering on thread -> %s", Thread.currentThread().getId());
             final FilterResults results = new FilterResults();
-            Map<Genre, Collection<Movie>> filtered = new HashMap<>(this.movies);
-            adapter.isFiltered = constraint.length() > 0;
-            if (constraint.length() > 0) {
+            Map<Genre, Collection<Movie>> filtered = new HashMap<>(this.origMovies);
+            adapter.isFiltered = false;
+            if (this.origMovies.size() > 0 && constraint.length() > 0) {
                 final String filterPattern = constraint.toString().toLowerCase().trim();
-                Stream.of(filtered).forEach(x -> {
-                    x.setValue(Stream.of(x.getValue()).filter(m -> m.getName().toLowerCase().contains(filterPattern) ||
-                            m.getDescription().toLowerCase().contains(filterPattern)).toList());
+                Stream.of(filtered).forEach(entry -> {
+                    List<Movie> filteredMovies = Stream.of(entry.getValue())
+                            .filter(getPredicate(filterPattern))
+                            .toList();
+                    entry.setValue(filteredMovies);
                 });
+                adapter.isFiltered = true;
             }
             results.values = filtered;
             results.count = filtered.size();
@@ -126,9 +163,12 @@ public class GenrePagerAdapter extends FragmentStatePagerAdapter implements Filt
         @Override
         protected void publishResults(CharSequence constraint, FilterResults results) {
             Map<Genre, Collection<Movie>> movies = (Map<Genre, Collection<Movie>>) results.values;
-            List<Genre> genres = Stream.of(movies).filter(x -> x.getValue().size() > 0).map(Map.Entry::getKey)
-                    .sortBy(Genre::getId).toList();
-            this.adapter.updateGenres(genres, movies);
+            this.adapter.update(movies);
+        }
+
+        protected Predicate<Movie> getPredicate(String filterPattern) {
+            return m -> m.getName().toLowerCase().contains(filterPattern) ||
+                    m.getDescription().toLowerCase().contains(filterPattern);
         }
     }
 }

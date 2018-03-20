@@ -7,10 +7,13 @@ import android.support.annotation.MainThread;
 import android.support.annotation.Nullable;
 import android.support.v7.util.DiffUtil;
 import android.support.v7.widget.RecyclerView;
+import android.util.TimingLogger;
 import android.view.ViewGroup;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import timber.log.Timber;
 
 /**
  * A generic RecyclerView adapter that uses Data Binding & DiffUtil.
@@ -22,7 +25,7 @@ public abstract class DataBoundListAdapter<T, V extends ViewDataBinding>
         extends RecyclerView.Adapter<DataBoundViewHolder<V>> {
 
     @Nullable
-    private List<T> items;
+    private List<T> items = new ArrayList<>();
     // each time data is set, we update this variable so that if DiffUtil calculation returns
     // after repetitive updates, we can ignore the old calculation
     private int dataVersion = 0;
@@ -45,13 +48,17 @@ public abstract class DataBoundListAdapter<T, V extends ViewDataBinding>
     @SuppressLint("StaticFieldLeak")
     @MainThread
     public void replace(List<T> update) {
+        Timber.i("Replacing movies list.");
         dataVersion++;
         if (items == null) {
             if (update == null) {
                 return;
             }
             items = update;
+            TimingLogger timings = new TimingLogger("MEASURE", "methodA");
             notifyDataSetChanged();
+            timings.addSplit("work A");
+            timings.dumpToLog();
         } else if (update == null) {
             int oldSize = items.size();
             items = null;

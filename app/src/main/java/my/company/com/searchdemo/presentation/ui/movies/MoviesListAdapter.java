@@ -51,12 +51,12 @@ public class MoviesListAdapter extends DataBoundListAdapter<Movie, ItemMovieBind
 
     @Override
     protected boolean areItemsTheSame(Movie oldItem, Movie newItem) {
-        return oldItem.equals(newItem);
+        return oldItem.getId() == newItem.getId();
     }
 
     @Override
     protected boolean areContentsTheSame(Movie oldItem, Movie newItem) {
-        return oldItem.equals(newItem);
+        return oldItem.getId() == newItem.getId();
     }
 
     public void setOriginalList(List<Movie> originalList) {

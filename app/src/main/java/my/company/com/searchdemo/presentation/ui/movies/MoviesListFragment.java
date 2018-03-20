@@ -22,7 +22,6 @@ import my.company.com.searchdemo.domain.models.Genre;
 import my.company.com.searchdemo.domain.models.Movie;
 import my.company.com.searchdemo.presentation.base.MvvmFragment;
 import my.company.com.searchdemo.presentation.helpers.AutoClearedValue;
-import timber.log.Timber;
 
 /**
  * @author Yevgen Oliinykov on 3/17/18.
@@ -68,21 +67,50 @@ public class MoviesListFragment extends MvvmFragment<FragmentMoviesListBinding, 
         super.onActivityCreated(savedInstanceState);
         this.onMoviesChangedCallback = new OnMoviesChangedCallback();
         setupMoviesList();
+        initMovies();
     }
 
     @Override
     public void onResume() {
         super.onResume();
         this.viewModel.movies.addOnPropertyChangedCallback(onMoviesChangedCallback);
-        subscribeToSearchView();
-        initMoviesList();
+        updateMoviesList(this.viewModel.movies.get());
     }
 
     @Override
     public void onPause() {
         super.onPause();
         this.viewModel.movies.removeOnPropertyChangedCallback(onMoviesChangedCallback);
-        unsubscribeFromSearchView();
+    }
+
+    public void updateMoviesList(List<Movie> movies) {
+        if (moviesAdapter != null)
+            this.moviesAdapter.get().replace(movies);
+    }
+
+    private void initMovies() {
+        Bundle args = getArguments();
+        if (args != null && args.containsKey(ARG_GENRE)) {
+            this.viewModel.genre.set(Parcels.unwrap(args.getParcelable(ARG_GENRE)));
+        }
+        if (args != null && args.containsKey(ARG_MOVIES)) {
+            List<Movie> movies = Parcels.unwrap(args.getParcelable(ARG_MOVIES));
+            this.viewModel.movies.set(movies);
+        }
+    }
+
+    private class OnMoviesChangedCallback extends Observable.OnPropertyChangedCallback {
+        @Override
+        public void onPropertyChanged(Observable observable, int i) {
+            updateMoviesList(MoviesListFragment.this.viewModel.movies.get());
+        }
+    }
+
+    private void setupMoviesList() {
+        MoviesListAdapter adapter = new MoviesListAdapter(movie -> { /*noop*/ });
+        this.moviesAdapter = new AutoClearedValue<>(this, adapter);
+        this.binding.get().recyclerView.setHasFixedSize(true);
+        this.binding.get().recyclerView.setAdapter(adapter);
     }
 
     public void setSearchViewObservable(io.reactivex.Observable<String> observable) {
@@ -92,7 +120,6 @@ public class MoviesListFragment extends MvvmFragment<FragmentMoviesListBinding, 
     private void subscribeToSearchView() {
         if (searchViewObservable != null) {
             this.searchViewDisposable = searchViewObservable.subscribe(s -> {
-                Timber.i("Search value: " + s);
                 if (moviesAdapter.get().getOriginalList().size() > 0)
                     moviesAdapter.get().getFilter().filter(s);
             });
@@ -102,45 +129,5 @@ public class MoviesListFragment extends MvvmFragment<FragmentMoviesListBinding, 
     private void unsubscribeFromSearchView() {
         if (this.searchViewDisposable != null)
             this.searchViewDisposable.dispose();
-    }
-
-    private void initMoviesList() {
-        Bundle args = getArguments();
-        if (args != null && args.containsKey(ARG_GENRE)) {
-            this.viewModel.genre.set(Parcels.unwrap(args.getParcelable(ARG_GENRE)));
-        } else {
-            this.viewModel.genre.set(null);
-        }
-        if (args != null && args.containsKey(ARG_MOVIES)) {
-            this.viewModel.movies.set(Parcels.unwrap(args.getParcelable(ARG_MOVIES)));
-        }
-
-//        updateMoviesList(viewModel.movies.get());
-    }
-
-    private class OnMoviesChangedCallback extends Observable.OnPropertyChangedCallback {
-        @Override
-        public void onPropertyChanged(Observable observable, int i) {
-            List<Movie> movies = viewModel.movies.get();
-            updateMoviesList(movies);
-        }
-    }
-
-    public void updateMoviesList(List<Movie> movies) {
-        if (moviesAdapter != null)
-        {
-            this.moviesAdapter.get().setOriginalList(movies);
-            List<Movie> copy = new ArrayList<>();
-            copy.addAll(movies);
-            this.moviesAdapter.get().replace(copy);
-        }
-    }
-
-    private void setupMoviesList() {
-        MoviesListAdapter adapter = new MoviesListAdapter(movie -> {
-        });
-        this.moviesAdapter = new AutoClearedValue<>(this, adapter);
-        this.binding.get().recyclerView.setHasFixedSize(true);
-        this.binding.get().recyclerView.setAdapter(adapter);
     }
 }
