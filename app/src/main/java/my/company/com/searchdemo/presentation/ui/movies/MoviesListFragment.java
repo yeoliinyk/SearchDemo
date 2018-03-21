@@ -32,29 +32,42 @@ public class MoviesListFragment extends MvvmFragment<FragmentMoviesListBinding, 
 
     public static final String ARG_GENRE = "genre";
     public static final String ARG_MOVIES = "movies";
+    public static final String ARG_SEARCH_QUERY = "search_query";
 
-    public static MoviesListFragment newInstance(Genre genre) {
-        MoviesListFragment fragment = new MoviesListFragment();
-        Bundle args = new Bundle();
-        args.putParcelable(ARG_GENRE, Parcels.wrap(genre));
-        fragment.setArguments(args);
-        return fragment;
-    }
+    public static class Builder {
 
-    public static MoviesListFragment newInstance(Genre genre, Collection<Movie> movies) {
-        MoviesListFragment fragment = new MoviesListFragment();
-        Bundle args = new Bundle();
-        args.putParcelable(ARG_GENRE, Parcels.wrap(genre));
-        args.putParcelable(ARG_MOVIES, Parcels.wrap(new ArrayList<>(movies)));
-        fragment.setArguments(args);
-        return fragment;
+        private Bundle args = new Bundle();
+
+        public Builder setGenre(Genre genre) {
+            args.putParcelable(ARG_GENRE, Parcels.wrap(genre));
+            return this;
+        }
+
+        public Builder setMovies(Collection<Movie> movies) {
+            args.putParcelable(ARG_MOVIES, Parcels.wrap(new ArrayList<>(movies)));
+            return this;
+        }
+
+        public Builder setSearchQuery(String query) {
+            args.putString(ARG_SEARCH_QUERY, query);
+            return this;
+        }
+
+        public MoviesListFragment build() {
+            MoviesListFragment fragment = new MoviesListFragment();
+            fragment.setArguments(args);
+            return fragment;
+        }
     }
 
     AutoClearedValue<MoviesListAdapter> moviesAdapter;
     io.reactivex.Observable<String> searchViewObservable;
     Disposable searchViewDisposable;
 
+    String searchQuery;
+
     OnMoviesChangedCallback onMoviesChangedCallback;
+
 
     @Nullable
     @Override
@@ -74,13 +87,23 @@ public class MoviesListFragment extends MvvmFragment<FragmentMoviesListBinding, 
     public void onResume() {
         super.onResume();
         this.viewModel.movies.addOnPropertyChangedCallback(onMoviesChangedCallback);
-        updateMoviesList(this.viewModel.movies.get());
+        if (this.searchQuery != null && !this.searchQuery.isEmpty())
+            updateMoviesList(this.viewModel.getMovies(), this.searchQuery);
+        else
+            updateMoviesList(this.viewModel.getMovies());
     }
 
     @Override
     public void onPause() {
         super.onPause();
         this.viewModel.movies.removeOnPropertyChangedCallback(onMoviesChangedCallback);
+    }
+
+    public void updateMoviesList(List<Movie> movies, String searchQuery) {
+        if (moviesAdapter != null) {
+            this.moviesAdapter.get().replace(movies, searchQuery);
+            this.moviesAdapter.get().notifyDataSetChanged();
+        }
     }
 
     public void updateMoviesList(List<Movie> movies) {
@@ -96,6 +119,9 @@ public class MoviesListFragment extends MvvmFragment<FragmentMoviesListBinding, 
         if (args != null && args.containsKey(ARG_MOVIES)) {
             List<Movie> movies = Parcels.unwrap(args.getParcelable(ARG_MOVIES));
             this.viewModel.movies.set(movies);
+        }
+        if (args != null && args.containsKey(ARG_SEARCH_QUERY)) {
+            this.searchQuery = args.getString(ARG_SEARCH_QUERY);
         }
     }
 

@@ -48,6 +48,10 @@ public class MoviesListViewModel extends ViewModel {
         });
     }
 
+    public List<Movie> getMovies() {
+        return this.movies.get();
+    }
+
     public void getMoviesWithGenreId(long genreId) {
         disposables.add(this.repository.getAllMoviesByGenre(genreId)
                 .doOnSubscribe(x -> loading.set(true))

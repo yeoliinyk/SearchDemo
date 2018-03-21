@@ -6,7 +6,6 @@ import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentPagerAdapter;
-import android.view.ViewGroup;
 import android.widget.Filter;
 import android.widget.Filterable;
 
@@ -36,8 +35,10 @@ public class GenrePagerAdapter extends FragmentPagerAdapter implements Filterabl
 
     private List<Genre> genres = new ArrayList<>();
     private Map<Genre, Collection<Movie>> movies = new HashMap<>();
-    private boolean isFiltered;
     private int baseId = 0;
+
+    private boolean isFiltered;
+    private String searchQuery = "";
 
     public GenrePagerAdapter(FragmentManager fm) {
         super(fm);
@@ -46,7 +47,11 @@ public class GenrePagerAdapter extends FragmentPagerAdapter implements Filterabl
     @Override
     public Fragment getItem(int position) {
         Genre genre = this.genres.get(position);
-        return MoviesListFragment.newInstance(genre, this.movies.get(genre));
+        return new MoviesListFragment.Builder()
+                .setGenre(genre)
+                .setMovies(this.movies.get(genre))
+                .setSearchQuery(this.searchQuery)
+                .build();
     }
 
     // workaround for bug in FragmentPagerAdapter -> on data set changed fragments remains cached with old position tag
@@ -63,7 +68,7 @@ public class GenrePagerAdapter extends FragmentPagerAdapter implements Filterabl
         if (genre != null) {
             int correctPosition = this.genres.indexOf(genre);
             position = correctPosition >= 0 ? correctPosition : POSITION_NONE;
-            fragment.updateMoviesList(new ArrayList<>(this.movies.get(genre)));
+            fragment.updateMoviesList(new ArrayList<>(this.movies.get(genre)), this.searchQuery);
         }
 
         return position;
@@ -83,6 +88,11 @@ public class GenrePagerAdapter extends FragmentPagerAdapter implements Filterabl
             title += String.format(Locale.getDefault(), " (%d)", getMoviesByPosition(position).size());
 
         return title;
+    }
+
+    public void update(Map<Genre, Collection<Movie>> movies, String searchQuery) {
+        this.searchQuery = searchQuery;
+        update(movies);
     }
 
     public void update(Map<Genre, Collection<Movie>> movies) {
@@ -163,7 +173,7 @@ public class GenrePagerAdapter extends FragmentPagerAdapter implements Filterabl
         @Override
         protected void publishResults(CharSequence constraint, FilterResults results) {
             Map<Genre, Collection<Movie>> movies = (Map<Genre, Collection<Movie>>) results.values;
-            this.adapter.update(movies);
+            this.adapter.update(movies, constraint.toString());
         }
 
         protected Predicate<Movie> getPredicate(String filterPattern) {

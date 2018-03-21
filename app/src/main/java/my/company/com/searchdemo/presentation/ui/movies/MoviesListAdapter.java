@@ -1,6 +1,11 @@
 package my.company.com.searchdemo.presentation.ui.movies;
 
 import android.databinding.DataBindingUtil;
+import android.graphics.Color;
+import android.support.v4.content.ContextCompat;
+import android.text.Spannable;
+import android.text.SpannableStringBuilder;
+import android.text.style.ForegroundColorSpan;
 import android.view.LayoutInflater;
 import android.view.ViewGroup;
 import android.widget.Filter;
@@ -8,6 +13,7 @@ import android.widget.Filterable;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Stream;
 
 import my.company.com.searchdemo.R;
 import my.company.com.searchdemo.databinding.ItemMovieBinding;
@@ -25,6 +31,7 @@ public class MoviesListAdapter extends DataBoundListAdapter<Movie, ItemMovieBind
     private List<Movie> originalList = new ArrayList<>();
     private final MovieClickCallback movieClickCallback;
     private MovieFilter filter;
+    private String searchQuery = "";
 
     public MoviesListAdapter(MovieClickCallback movieClickCallback) {
         this.movieClickCallback = movieClickCallback;
@@ -46,7 +53,22 @@ public class MoviesListAdapter extends DataBoundListAdapter<Movie, ItemMovieBind
 
     @Override
     protected void bind(ItemMovieBinding binding, Movie item) {
-        binding.setMovie(item);
+//        binding.setMovie(item);
+        if (searchQuery.length() > 0) {
+            //color your text here
+            SpannableStringBuilder sb = new SpannableStringBuilder(item.getName());
+            ForegroundColorSpan fcs = new ForegroundColorSpan(Color.RED);
+            int index = item.getName().toLowerCase().indexOf(searchQuery);
+            while (index > -1) {
+                 //specify color here
+                sb.setSpan(fcs, index, index + searchQuery.length(), Spannable.SPAN_INCLUSIVE_INCLUSIVE);
+                index = item.getName().toLowerCase().indexOf(searchQuery, index + 1);
+            }
+            binding.name.setText(sb);
+        } else {
+            binding.name.setText(item.getName());
+        }
+        binding.desc.setText(item.getDescription());
     }
 
     @Override
@@ -73,6 +95,11 @@ public class MoviesListAdapter extends DataBoundListAdapter<Movie, ItemMovieBind
             filter = new MovieFilter(this, this.originalList);
         }
         return filter;
+    }
+
+    public void replace(List<Movie> update, String searchQuery) {
+        this.searchQuery = searchQuery;
+        super.replace(update);
     }
 
     private static class MovieFilter extends Filter {
